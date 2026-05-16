@@ -62,20 +62,11 @@ class Engine(Adapter):
         self.X_centered = stored_patterns - self.mean_vec                # shape (K, 64)
         # === END CENTERING HACK ===
 
-        # === ANISOTROPY CORRECTION ===
-        # Precompute (1/Var_j)^alpha for the partial inverse-variance correction.
-        # The harness spread metric uses H_jj ~ Var_j(X).  Multiplying precision
-        # by (1/Var_j)^alpha partially flattens pi_j * H_j:
-        #   pi_j * H_j  ~  reliability_j * Var_j^(1-alpha)
-        # alpha=0.448 is the empirically-validated optimum:
-        #   - keeps mean retrieval delta >= +0.05  (full 70 pts)
-        #   - all per-seed deltas >= 0             (no halving penalty)
-        #   - achieves mean spread reduction ~3.6x (~11 ani pts)
-        self._alpha = 0.448
-        var_centered = np.var(self.X_centered, axis=0) + 1e-10   # shape (N,)
-        # Store inv_var^alpha directly — applied once per query
-        self.inv_var_alpha = (1.0 / var_centered) ** self._alpha  # shape (N,)
-        # === END ANISOTROPY CORRECTION ===
+        # === REMOVED ANISOTROPY CORRECTION ===
+        # self._alpha = 0.448
+        # var_centered = np.var(self.X_centered, axis=0) + 1e-10   # shape (N,)
+        # self.inv_var_alpha = (1.0 / var_centered) ** self._alpha  # shape (N,)
+        # === END REMOVED ANISOTROPY CORRECTION ===
 
         # Cosine-normalised centered patterns for nearest-neighbour matching
         norms_c = np.linalg.norm(self.X_centered, axis=1, keepdims=True)
@@ -151,13 +142,9 @@ class Engine(Adapter):
                 disc_weight = 0.3 * (1.0 - cos_gap / 0.15)
                 precision = precision * (1.0 + disc_weight * diff_norm)
 
-        # === ANISOTROPY CORRECTION ===
-        # Multiply by (1/Var_j)^alpha (precomputed in __init__).
-        # This partially counteracts the Hessian structure H_jj ~ Var_j,
-        # reducing spread of pi_j * H_j from ~3000x down to ~3.6x,
-        # while keeping the reliability signal intact for retrieval steering.
-        precision = precision * self.inv_var_alpha
-        # === END ANISOTROPY CORRECTION ===
+        # === REMOVED ANISOTROPY CORRECTION ===
+        # precision = precision * self.inv_var_alpha
+        # === END REMOVED ANISOTROPY CORRECTION ===
 
         # -- Step 5: Safety guard -------------------------------------------
         if not np.all(np.isfinite(precision)):
